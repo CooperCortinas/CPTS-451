@@ -1,0 +1,4 @@
+PyQt5
+psycopg2
+pyunpack
+patool

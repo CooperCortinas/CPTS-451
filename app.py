@@ -1,6 +1,6 @@
 import sys, json, psycopg2
 from pathlib import Path
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QTableWidgetItem
 from PyQt5 import uic
 from typing import Any
 
@@ -27,6 +27,10 @@ class myApp(QMainWindow):
 
         self.ui.state_combo.currentTextChanged.connect(self.state_changed)
         self.ui.city_list.currentItemChanged.connect(self.city_changed)
+
+        self.ui.business_table.setColumnCount(3)
+        self.ui.business_table.verticalHeader().setVisible(False)
+        self.ui.business_table.horizontalHeader().setVisible(False)
 
         self.init_states()
 
@@ -71,7 +75,7 @@ class myApp(QMainWindow):
         self.ui.city_list.addItems(city_strings)
 
     def city_changed(self):
-        self.ui.business_list.clear()
+        self.ui.business_table.clear()
         selected_state = self.ui.state_combo.currentText()
         try:
             selected_city = self.ui.city_list.currentItem().text()
@@ -85,9 +89,11 @@ class myApp(QMainWindow):
             ORDER BY name;
         """
         business_tuples = select_query(self.cur, query)
-        business_strings = extract_singletons(business_tuples)
 
-        self.ui.business_list.addItems(business_strings)
+        self.ui.business_table.setRowCount(len(business_tuples))
+        for row, item in enumerate(business_tuples):
+            for col, value in enumerate(item):
+                self.ui.business_table.setItem(row, col, QTableWidgetItem(str(value)))
 
 def get_pg_config_str(config_path: Path) -> str:
     with open(config_path, "r") as file:

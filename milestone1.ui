@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>580</width>
+    <width>640</width>
     <height>300</height>
    </rect>
   </property>
@@ -77,19 +77,19 @@
     <rect>
      <x>270</x>
      <y>10</y>
-     <width>300</width>
+     <width>351</width>
      <height>280</height>
     </rect>
    </property>
    <property name="title">
     <string>Businesses</string>
    </property>
-   <widget class="QListWidget" name="business_list">
+   <widget class="QTableWidget" name="business_table">
     <property name="geometry">
      <rect>
       <x>20</x>
       <y>30</y>
-      <width>260</width>
+      <width>310</width>
       <height>230</height>
      </rect>
     </property>

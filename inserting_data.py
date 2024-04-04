@@ -124,7 +124,7 @@ def insert2UsersTable():
             sql_str = "INSERT INTO Users (user_id, avg_stars, name, review_count, yelping_since) VALUES (%s, %s, %s, %s, %s)"
             values = (
                 cleanStr4SQL(data['user_id']),
-                0,
+                data['average_stars'],
                 cleanStr4SQL(data['name']),
                 data['review_count'],
                 data['yelping_since']  
@@ -298,36 +298,47 @@ def updateBusinessCheckins():
     conn.close()
     print("num_checkins updated successfully.")
 
-def updateBusinessReviews():
+
+def updateBusinessAggregateData():
     try:
         conn = psycopg2.connect(f"dbname={dbname} user='postgres' host='localhost' password={password}")
         cur = conn.cursor()
-    except:
-        print('Unable to connect to the database!')
-        return
-
-    update_sql = """
-        UPDATE Business
-        SET review_count = COALESCE((
-            SELECT COUNT(*) FROM Review
-            WHERE Review.business_id = Business.business_id
-        ), 0),
-        review_rating = COALESCE((
-            SELECT AVG(stars) FROM Review
-            WHERE Review.business_id = Business.business_id
-        ), 0);
-    """
-
-    try:
-        cur.execute(update_sql)
+        
+        # Step 1: Create a temporary table
+        cur.execute("""
+            CREATE TEMP TABLE IF NOT EXISTS temp_aggregate AS
+            SELECT 
+                business_id,
+                COALESCE(COUNT(*), 0) AS review_count,
+                COALESCE(AVG(stars), 0) AS review_rating
+            FROM Review
+            GROUP BY business_id
+        """)
+        
+        # Step 2: Update the Business table using the temporary table
+        cur.execute("""
+            UPDATE Business
+            SET 
+                review_count = temp_aggregate.review_count,
+                review_rating = temp_aggregate.review_rating
+            FROM temp_aggregate
+            WHERE Business.business_id = temp_aggregate.business_id
+        """)
+        
+        # Optionally: Drop the temporary table if you wish
+        cur.execute("DROP TABLE temp_aggregate")
+        
         conn.commit()
+        print("Review Count and Review Rating Updated Successfully.")
+        
     except Exception as e:
-        print(f"ERROR - Update failed for review_count and review_rating: {e}")
+        print(f"ERROR: {e}")
         conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
 
-    cur.close()
-    conn.close()
-    print("review_count and review_rating updated successfully.")
+updateBusinessAggregateData()
 
 
 
@@ -338,4 +349,4 @@ insert2ReviewTable()
 insert2AttributesTable()
 insert2CategoriesTable()
 updateBusinessCheckins()
-updateBusinessReviews()
+updateBusinessAggregateData()

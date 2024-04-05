@@ -5,7 +5,7 @@ from PyQt5 import uic
 from typing import Any
 
 
-qtCreatorFile = Path("milestone1.ui")
+qtCreatorFile = Path("milestone2.ui")
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
@@ -27,6 +27,7 @@ class myApp(QMainWindow):
 
         self.ui.state_combo.currentTextChanged.connect(self.state_changed)
         self.ui.city_list.currentItemChanged.connect(self.city_changed)
+        self.ui.zip_list.currentItemChanged.connect(self.zip_changed)
 
         self.init_states()
 
@@ -48,7 +49,7 @@ class myApp(QMainWindow):
     def init_states(self):
         query = """
             SELECT DISTINCT state
-            FROM business
+            FROM Business
             ORDER BY state;
         """
         state_tuples = select_query(self.cur, query)
@@ -61,7 +62,7 @@ class myApp(QMainWindow):
         selected_state = self.ui.state_combo.currentText()
         query = f"""
             SELECT DISTINCT city
-            FROM business
+            FROM Business
             WHERE state='{selected_state}'
             ORDER BY city;
         """
@@ -71,17 +72,37 @@ class myApp(QMainWindow):
         self.ui.city_list.addItems(city_strings)
 
     def city_changed(self):
-        self.ui.business_list.clear()
+        self.ui.zip_list.clear()
         selected_state = self.ui.state_combo.currentText()
         try:
             selected_city = self.ui.city_list.currentItem().text()
         except AttributeError:
             return
+        
+        query = f"""
+            SELECT DISTINCT zipcode
+            FROM Business
+            WHERE city='{selected_city}' AND state='{selected_state}'
+            ORDER BY zipcode;
+        """
+        zip_tuples = select_query(self.cur, query)
+        zip_strings = extract_singletons(zip_tuples)
+
+        self.ui.zip_list.addItems(zip_strings)
+
+    def zip_changed(self):
+        self.ui.business_list.clear()
+        selected_state = self.ui.state_combo.currentText()
+        try:
+            selected_city = self.ui.city_list.currentItem().text()
+            selected_zip = self.ui.zip_list.currentItem().text()
+        except AttributeError:
+            return
 
         query = f"""
             SELECT name, city, state
-            FROM business
-            WHERE city='{selected_city}' AND state='{selected_state}'
+            FROM Business
+            WHERE city='{selected_city}' AND state='{selected_state}' AND zipcode='{selected_zip}'
             ORDER BY name;
         """
         business_tuples = select_query(self.cur, query)

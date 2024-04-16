@@ -1,11 +1,11 @@
 import sys, json, psycopg2
 from pathlib import Path
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QTableWidget, QTableWidgetItem
 from PyQt5 import uic
 from typing import Any
 
 
-qtCreatorFile = Path("milestone2.ui")
+qtCreatorFile = Path("milestone3.ui")
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
@@ -28,6 +28,7 @@ class myApp(QMainWindow):
         self.ui.state_combo.currentTextChanged.connect(self.state_changed)
         self.ui.city_list.currentItemChanged.connect(self.city_changed)
         self.ui.zip_list.currentItemChanged.connect(self.zip_changed)
+        self.ui.category_list.currentItemChanged.connect(self.category_changed)
 
         self.init_states()
 
@@ -75,10 +76,11 @@ class myApp(QMainWindow):
         self.ui.zip_list.clear()
         selected_state = self.ui.state_combo.currentText()
         try:
+            self.ui.refreshButton.setEnabled(False)
             selected_city = self.ui.city_list.currentItem().text()
         except AttributeError:
             return
-        
+
         query = f"""
             SELECT DISTINCT zipcode
             FROM Business
@@ -91,24 +93,58 @@ class myApp(QMainWindow):
         self.ui.zip_list.addItems(zip_strings)
 
     def zip_changed(self):
-        self.ui.business_list.clear()
+        self.ui.category_list.clear()
         selected_state = self.ui.state_combo.currentText()
         try:
             selected_city = self.ui.city_list.currentItem().text()
             selected_zip = self.ui.zip_list.currentItem().text()
+            self.ui.refreshButton.setEnabled(True)
         except AttributeError:
             return
 
         query = f"""
-            SELECT name, city, state
-            FROM Business
-            WHERE city='{selected_city}' AND state='{selected_state}' AND zipcode='{selected_zip}'
+            SELECT DISTINCT c.cat_name
+            FROM Business b
+            JOIN Categories c ON b.business_id = c.business_id
+            WHERE b.city='{selected_city}' AND b.state='{selected_state}' AND b.zipcode='{selected_zip}'
+            ORDER BY c.cat_name;
+        """
+        category_tuples = select_query(self.cur, query)
+        category_strings = extract_singletons(category_tuples)
+
+        self.ui.category_list.addItems(category_strings)
+
+    def category_changed(self):
+        clearTable(self.ui.business_table)
+        selected_state = self.ui.state_combo.currentText()
+        try:
+            selected_city = self.ui.city_list.currentItem().text()
+            selected_zip = self.ui.zip_list.currentItem().text()
+            selected_category = self.ui.category_list.currentItem().text()
+        except AttributeError:
+            return
+
+        columns = ["name", "city", "state", "cat_name"]
+        query = f"""
+            SELECT {', '.join(columns)}
+            FROM Business b
+            JOIN Categories c ON b.business_id = c.business_id
+            WHERE b.city='{selected_city}' AND b.state='{selected_state}' AND b.zipcode='{selected_zip.strip()}' AND c.cat_name='{selected_category}'
             ORDER BY name;
         """
         business_tuples = select_query(self.cur, query)
-        business_strings = extract_singletons(business_tuples)
 
-        self.ui.business_list.addItems(business_strings)
+        business_ct = len(business_tuples)
+        attr_ct = len(columns)
+
+        self.ui.business_table.setRowCount(business_ct)
+        self.ui.business_table.setColumnCount(attr_ct)
+        self.ui.business_table.setHorizontalHeaderLabels([header.capitalize() for header in columns])
+
+        for business in range(business_ct):
+            for attr in range(attr_ct):
+                data = QTableWidgetItem(f"{business_tuples[business][attr]}")
+                self.ui.business_table.setItem(business, attr, data)
 
 def get_pg_config_str(config_path: Path) -> str:
     with open(config_path, "r") as file:
@@ -123,6 +159,11 @@ def select_query(cur: psycopg2.extensions.cursor, query: str) -> list[tuple[Any,
 def extract_singletons(tuples: list[tuple[Any,]]) -> list[Any]:
     extract = lambda x: x[0]
     return list(map(extract, tuples))
+
+def clearTable(table: QTableWidget) -> None:
+    table.clearContents()
+    table.setRowCount(0)
+    table.setColumnCount(0)
 
 if __name__ == "__main__":
     config_file = Path("pg_config.json")

@@ -248,7 +248,7 @@ def updateBusinessCheckins(conn: psycopg2.extensions.connection):
     print("num_checkins updated successfully.")
 
 
-def updateBusinessAggregateData():
+def updateBusinessAggregateData(conn: psycopg2.extensions.connection, writeout=False):
     cur = conn.cursor()
     try:
         # Step 1: Create a temporary table
@@ -284,6 +284,20 @@ def updateBusinessAggregateData():
     cur.close()
     print("Review Count and Review Rating Updated Successfully.")
 
+def insertFromSQLFile(conn, sql_file_path):
+    cur = conn.cursor()
+    with open(sql_file_path, 'r') as file:
+        sql_script = file.read()
+        try:
+            cur.execute(sql_script)
+            conn.commit()
+            print(f"{sql_file_path} script executed successfully.")
+        except Exception as e:
+            print(f"Failed to execute SQL script due to: {e}")
+            conn.rollback()
+        finally:
+            cur.close()
+
 if __name__ == "__main__":
     config_file = Path("pg_config.json")
     config = get_pg_config_str(config_file)
@@ -292,7 +306,8 @@ if __name__ == "__main__":
     except psycopg2.errors.OperationalError:
         print("Unable to connect to the database!")
         exit()
-
+    
+    insertFromSQLFile(conn, 'Waynes_Task_Force_relations_v2.sql')
     insert2BusinessTable(conn)
     insert2UsersTable(conn)
     insert2CheckinTable(conn)
@@ -301,3 +316,5 @@ if __name__ == "__main__":
     insert2CategoriesTable(conn)
     updateBusinessCheckins(conn)
     updateBusinessAggregateData(conn)
+    insertFromSQLFile(conn, 'zipData.sql')
+    

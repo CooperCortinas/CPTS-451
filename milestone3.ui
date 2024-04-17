@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>893</width>
-    <height>972</height>
+    <width>890</width>
+    <height>970</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -267,7 +267,7 @@
    <property name="title">
     <string/>
    </property>
-   <widget class="QPushButton" name="refreshButton">
+   <widget class="QPushButton" name="refresh_button">
     <property name="enabled">
      <bool>false</bool>
     </property>
@@ -283,7 +283,7 @@
      <string>Refresh</string>
     </property>
    </widget>
-   <widget class="QTableWidget" name="successful_businesses">
+   <widget class="QTableWidget" name="successful_table">
     <property name="geometry">
      <rect>
       <x>490</x>
@@ -293,7 +293,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QTableWidget" name="popular_businesses">
+   <widget class="QTableWidget" name="popular_table">
     <property name="geometry">
      <rect>
       <x>110</x>

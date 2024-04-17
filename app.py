@@ -30,6 +30,8 @@ class myApp(QMainWindow):
         self.ui.zip_list.currentItemChanged.connect(self.zip_changed)
         self.ui.category_list.currentItemChanged.connect(self.category_changed)
 
+        self.ui.refresh_button.clicked.connect(self.updateSuccessfulPopular)
+
         self.init_states()
 
     def __del__(self):
@@ -74,9 +76,10 @@ class myApp(QMainWindow):
 
     def city_changed(self):
         self.ui.zip_list.clear()
-        selected_state = self.ui.state_combo.currentText()
+
         try:
-            self.ui.refreshButton.setEnabled(False)
+            selected_state = self.ui.state_combo.currentText()
+            self.ui.refresh_button.setEnabled(False)
             selected_city = self.ui.city_list.currentItem().text()
         except AttributeError:
             return
@@ -94,11 +97,12 @@ class myApp(QMainWindow):
 
     def zip_changed(self):
         self.ui.category_list.clear()
-        selected_state = self.ui.state_combo.currentText()
+        clearTable(self.ui.successful_table)
+        clearTable(self.ui.popular_table)
+
         try:
-            selected_city = self.ui.city_list.currentItem().text()
             selected_zip = self.ui.zip_list.currentItem().text()
-            self.ui.refreshButton.setEnabled(True)
+            self.ui.refresh_button.setEnabled(True)  # only set enabled if a zip code is selected, not on table clear
         except AttributeError:
             return
 
@@ -106,7 +110,7 @@ class myApp(QMainWindow):
             SELECT DISTINCT c.cat_name
             FROM Business b
             JOIN Categories c ON b.business_id = c.business_id
-            WHERE b.city='{selected_city}' AND b.state='{selected_state}' AND b.zipcode='{selected_zip}'
+            WHERE b.zipcode='{selected_zip}'
             ORDER BY c.cat_name;
         """
         category_tuples = select_query(self.cur, query)
@@ -116,9 +120,8 @@ class myApp(QMainWindow):
 
     def category_changed(self):
         clearTable(self.ui.business_table)
-        selected_state = self.ui.state_combo.currentText()
+        
         try:
-            selected_city = self.ui.city_list.currentItem().text()
             selected_zip = self.ui.zip_list.currentItem().text()
             selected_category = self.ui.category_list.currentItem().text()
         except AttributeError:
@@ -129,22 +132,26 @@ class myApp(QMainWindow):
             SELECT {', '.join(columns)}
             FROM Business b
             JOIN Categories c ON b.business_id = c.business_id
-            WHERE b.city='{selected_city}' AND b.state='{selected_state}' AND b.zipcode='{selected_zip.strip()}' AND c.cat_name='{selected_category}'
+            WHERE b.zipcode='{selected_zip.strip()}' AND c.cat_name='{selected_category}'
             ORDER BY name;
         """
         business_tuples = select_query(self.cur, query)
 
-        business_ct = len(business_tuples)
-        attr_ct = len(columns)
+        updateTable(self.ui.business_table, business_tuples, [header.capitalize() for header in columns])
 
-        self.ui.business_table.setRowCount(business_ct)
-        self.ui.business_table.setColumnCount(attr_ct)
-        self.ui.business_table.setHorizontalHeaderLabels([header.capitalize() for header in columns])
+    def updateSuccessfulPopular(self):
+        queries_tables_columns = [
+            (Path("queries/successful.sql"), self.ui.successful_table, ["business_id", "name", "first_category", "stars", "total_checkins"]),
+            (Path("queries/popular.sql"), self.ui.popular_table, ["business_id", "name", "growth rate"])
+        ]
 
-        for business in range(business_ct):
-            for attr in range(attr_ct):
-                data = QTableWidgetItem(f"{business_tuples[business][attr]}")
-                self.ui.business_table.setItem(business, attr, data)
+        for tup in queries_tables_columns:
+            with open(tup[0], 'r') as f:
+                selected_zip = self.ui.zip_list.currentItem().text()
+                query = f.read().replace("{zipcode}", selected_zip.strip())
+                business_tuples = select_query(self.cur, query)
+
+                updateTable(tup[1], business_tuples, tup[2])
 
 def get_pg_config_str(config_path: Path) -> str:
     with open(config_path, "r") as file:
@@ -164,6 +171,19 @@ def clearTable(table: QTableWidget) -> None:
     table.clearContents()
     table.setRowCount(0)
     table.setColumnCount(0)
+
+def updateTable(table: QTableWidget, business_tuples: tuple[Any,...], headers: list[str]) -> None:
+        business_ct = len(business_tuples)
+        attr_ct = len(headers)
+
+        table.setRowCount(business_ct)
+        table.setColumnCount(attr_ct)
+        table.setHorizontalHeaderLabels(headers)
+
+        for business in range(business_ct):  # preserve indices to set cell location
+            for attr in range(attr_ct):
+                data = QTableWidgetItem(f"{business_tuples[business][attr]}")
+                table.setItem(business, attr, data)
 
 if __name__ == "__main__":
     config_file = Path("pg_config.json")

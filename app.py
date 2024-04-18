@@ -34,6 +34,17 @@ class myApp(QMainWindow):
 
         self.init_states()
 
+        # column names in Business table and display name in UI
+        self.business_columns = [
+            ("b.name", "Name"),
+            ("b.address", "Address"),
+            ("b.city", "City"),
+            ("b.stars", "Stars"),
+            ("b.review_rating", "Review Rating"),
+            ("b.review_count", "Review Count"),
+            ("b.num_checkins", "Checkin Count")
+        ]
+
     def __del__(self):
         try:
             self.cur.close()
@@ -102,6 +113,7 @@ class myApp(QMainWindow):
         clearTable(self.ui.successful_table)
         clearTable(self.ui.popular_table)
         clearTable(self.ui.zipstatistics_categories)
+        clearTable(self.ui.business_table)
 
         try:
             selected_zip = self.ui.zip_list.currentItem().text().strip()
@@ -121,6 +133,16 @@ class myApp(QMainWindow):
         category_strings = extract_singletons(category_tuples)
 
         self.ui.category_list.addItems(category_strings)
+
+        query = f"""
+            SELECT {', '.join([c[0] for c in self.business_columns])}
+            FROM Business b
+            WHERE b.zipcode='{selected_zip.strip()}'
+            ORDER BY name;
+        """
+        business_tuples = select_query(self.cur, query)
+
+        updateTable(self.ui.business_table, business_tuples, [h[1] for h in self.business_columns])
 
     def updateZipStatistics(self, zipcode: str):
         zipquery = f"""
@@ -157,26 +179,15 @@ class myApp(QMainWindow):
 
     def category_changed(self):
         clearTable(self.ui.business_table)
-        
+
         try:
             selected_zip = self.ui.zip_list.currentItem().text()
             selected_category = self.ui.category_list.currentItem().text()
         except AttributeError:
             return
 
-        # column name in table, display name in UI
-        columns = [
-            ("b.name", "Name"),
-            ("b.address", "Address"),
-            ("b.city", "City"),
-            ("b.stars", "Stars"),
-            ("b.review_rating", "Review Rating"),
-            ("b.review_count", "Review Count"),
-            ("b.num_checkins", "Checkin Count")
-        ]
-        
         query = f"""
-            SELECT {', '.join([c[0] for c in columns])}
+            SELECT {', '.join([c[0] for c in self.business_columns])}
             FROM Business b
             JOIN Categories c ON b.business_id = c.business_id
             WHERE b.zipcode='{selected_zip.strip()}' AND c.cat_name='{selected_category}'
@@ -184,7 +195,7 @@ class myApp(QMainWindow):
         """
         business_tuples = select_query(self.cur, query)
 
-        updateTable(self.ui.business_table, business_tuples, [h[1] for h in columns])
+        updateTable(self.ui.business_table, business_tuples, [h[1] for h in self.business_columns])
 
     def updateSuccessfulPopular(self):
         queries_tables_columns = [

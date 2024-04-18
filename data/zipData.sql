@@ -1,3 +1,10 @@
+CREATE TABLE IF NOT EXISTS zipcodeData (
+    zipcode VARCHAR(5) PRIMARY KEY,
+    medianIncome INT,
+    meanIncome INT,
+    population INT
+);
+
 INSERT INTO zipcodeData (zipcode,medianIncome,meanIncome,population) VALUES
 ('1001',56663,66688,16445),
 ('1002',49853,75063,28069),

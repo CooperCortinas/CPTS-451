@@ -96,13 +96,17 @@ class myApp(QMainWindow):
         self.ui.zip_list.addItems(zip_strings)
 
     def zip_changed(self):
+        # clear all tables dependent on zipcode
         self.ui.category_list.clear()
+        self.ui.zipstatistics_categories.clear()
         clearTable(self.ui.successful_table)
         clearTable(self.ui.popular_table)
+        clearTable(self.ui.zipstatistics_categories)
 
         try:
-            selected_zip = self.ui.zip_list.currentItem().text()
+            selected_zip = self.ui.zip_list.currentItem().text().strip()
             self.ui.refresh_button.setEnabled(True)  # only set enabled if a zip code is selected, not on table clear
+            self.updateZipStatistics(selected_zip)
         except AttributeError:
             return
 
@@ -117,6 +121,39 @@ class myApp(QMainWindow):
         category_strings = extract_singletons(category_tuples)
 
         self.ui.category_list.addItems(category_strings)
+
+    def updateZipStatistics(self, zipcode: str):
+        zipquery = f"""
+            SELECT meanIncome, population
+            FROM zipcodeData
+            WHERE zipcode='{zipcode}';
+        """
+
+        mean_income, population = select_query(self.cur, zipquery)[0]  # will always return 1 tuple
+        self.ui.zipstatistics_income.setText(str(mean_income))
+        self.ui.zipstatistics_population.setText(str(population))
+
+        businessquery = f"""
+            SELECT COUNT(*)
+            FROM Business
+            WHERE zipcode='{zipcode}';
+        """
+
+        num_businesses = select_query(self.cur, businessquery)[0][0]
+        self.ui.zipstatistics_businesses.setText(str(num_businesses))
+
+        catquery = f"""
+            SELECT COUNT(*) as count, c.cat_name
+            FROM Business b
+            JOIN Categories c ON b.business_id = c.business_id
+            WHERE zipcode='{zipcode}'
+            GROUP BY c.cat_name
+            ORDER BY count DESC;
+        """
+
+        business_tuples = select_query(self.cur, catquery)
+
+        updateTable(self.ui.zipstatistics_categories, business_tuples, ["Count", "Category"])
 
     def category_changed(self):
         clearTable(self.ui.business_table)
@@ -146,12 +183,13 @@ class myApp(QMainWindow):
         ]
 
         for tup in queries_tables_columns:
-            with open(tup[0], 'r') as f:
+            path, table, columns = tup
+            with open(path, 'r') as f:
                 selected_zip = self.ui.zip_list.currentItem().text()
                 query = f.read().replace("{zipcode}", selected_zip.strip())
                 business_tuples = select_query(self.cur, query)
 
-                updateTable(tup[1], business_tuples, tup[2])
+                updateTable(table, business_tuples, columns)
 
 def get_pg_config_str(config_path: Path) -> str:
     with open(config_path, "r") as file:

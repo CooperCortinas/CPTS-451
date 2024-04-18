@@ -284,7 +284,7 @@ def updateBusinessAggregateData(conn: psycopg2.extensions.connection, writeout=F
     cur.close()
     print("Review Count and Review Rating Updated Successfully.")
 
-def insertFromSQLFile(conn, sql_file_path):
+def insertFromSQLFile(conn: psycopg2.extensions.connection, sql_file_path: Path):
     cur = conn.cursor()
     with open(sql_file_path, 'r') as file:
         sql_script = file.read()
@@ -306,8 +306,8 @@ if __name__ == "__main__":
     except psycopg2.errors.OperationalError:
         print("Unable to connect to the database!")
         exit()
-    
-    insertFromSQLFile(conn, 'Waynes_Task_Force_relations_v2.sql')
+
+    insertFromSQLFile(conn, Path("Waynes_Task_Force_relations_v2.sql"))
     insert2BusinessTable(conn)
     insert2UsersTable(conn)
     insert2CheckinTable(conn)
@@ -316,5 +316,4 @@ if __name__ == "__main__":
     insert2CategoriesTable(conn)
     updateBusinessCheckins(conn)
     updateBusinessAggregateData(conn)
-    insertFromSQLFile(conn, 'zipData.sql')
-    
+    insertFromSQLFile(conn, Path("data/zipData.sql"))

@@ -110,6 +110,10 @@ class myApp(QMainWindow):
         # clear all tables dependent on zipcode
         self.ui.category_list.clear()
         self.ui.zipstatistics_categories.clear()
+        self.ui.zipstatistics_businesses.clear()
+        self.ui.zipstatistics_population.clear()
+        self.ui.zipstatistics_income.clear()
+
         clearTable(self.ui.successful_table)
         clearTable(self.ui.popular_table)
         clearTable(self.ui.zipstatistics_categories)

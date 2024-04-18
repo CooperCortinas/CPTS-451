@@ -307,7 +307,7 @@ if __name__ == "__main__":
         print("Unable to connect to the database!")
         exit()
 
-    insertFromSQLFile(conn, Path("Waynes_Task_Force_relations_v2.sql"))
+    insertFromSQLFile(conn, Path("queries/Waynes_Task_Force_relations_v2.sql"))
     insert2BusinessTable(conn)
     insert2UsersTable(conn)
     insert2CheckinTable(conn)

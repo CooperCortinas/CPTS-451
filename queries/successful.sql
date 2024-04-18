@@ -38,17 +38,18 @@ BusinessWithFirstCategoryAndCheckins AS (
         fc.first_category,
         b.stars,
         bc.total_checkins,
-        b.zipcode
+        b.zipcode,
+        b.review_count
     FROM
         FirstCategoryPerBusiness fc
         JOIN BusinessCheckins bc ON fc.business_id = bc.business_id
         JOIN Business b ON fc.business_id = b.business_id
 )
 SELECT
-    bfc.business_id,
     bfc.name,
     bfc.first_category,
     bfc.stars,
+    bfc.review_count,
     bfc.total_checkins
 FROM
     BusinessWithFirstCategoryAndCheckins bfc

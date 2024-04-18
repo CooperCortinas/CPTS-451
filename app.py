@@ -29,8 +29,8 @@ class myApp(QMainWindow):
         self.ui.city_list.currentItemChanged.connect(self.city_changed)
         self.ui.zip_list.currentItemChanged.connect(self.zip_changed)
         self.ui.category_list.currentItemChanged.connect(self.category_changed)
-
         self.ui.refresh_button.clicked.connect(self.updateSuccessfulPopular)
+        self.ui.zipstatistics_categories.horizontalHeader().setStretchLastSection(True)
 
         self.init_states()
 
@@ -164,9 +164,19 @@ class myApp(QMainWindow):
         except AttributeError:
             return
 
-        columns = ["name", "city", "state", "cat_name"]
+        # column name in table, display name in UI
+        columns = [
+            ("b.name", "Name"),
+            ("b.address", "Address"),
+            ("b.city", "City"),
+            ("b.stars", "Stars"),
+            ("b.review_rating", "Review Rating"),
+            ("b.review_count", "Review Count"),
+            ("b.num_checkins", "Checkin Count")
+        ]
+        
         query = f"""
-            SELECT {', '.join(columns)}
+            SELECT {', '.join([c[0] for c in columns])}
             FROM Business b
             JOIN Categories c ON b.business_id = c.business_id
             WHERE b.zipcode='{selected_zip.strip()}' AND c.cat_name='{selected_category}'
@@ -174,12 +184,12 @@ class myApp(QMainWindow):
         """
         business_tuples = select_query(self.cur, query)
 
-        updateTable(self.ui.business_table, business_tuples, [header.capitalize() for header in columns])
+        updateTable(self.ui.business_table, business_tuples, [h[1] for h in columns])
 
     def updateSuccessfulPopular(self):
         queries_tables_columns = [
-            (Path("queries/successful.sql"), self.ui.successful_table, ["business_id", "name", "first_category", "stars", "total_checkins"]),
-            (Path("queries/popular.sql"), self.ui.popular_table, ["business_id", "name", "growth rate"])
+            (Path("queries/successful.sql"), self.ui.successful_table, ["Name", "Category", "Stars", "Review Count", "Checkin Count"]),
+            (Path("queries/popular.sql"), self.ui.popular_table, ["Name", "Stars", "Review Rating", "Review Count"])
         ]
 
         for tup in queries_tables_columns:
@@ -211,17 +221,17 @@ def clearTable(table: QTableWidget) -> None:
     table.setColumnCount(0)
 
 def updateTable(table: QTableWidget, business_tuples: tuple[Any,...], headers: list[str]) -> None:
-        business_ct = len(business_tuples)
-        attr_ct = len(headers)
+    business_ct = len(business_tuples)
+    attr_ct = len(headers)
 
-        table.setRowCount(business_ct)
-        table.setColumnCount(attr_ct)
-        table.setHorizontalHeaderLabels(headers)
+    table.setRowCount(business_ct)
+    table.setColumnCount(attr_ct)
+    table.setHorizontalHeaderLabels(headers)
 
-        for business in range(business_ct):  # preserve indices to set cell location
-            for attr in range(attr_ct):
-                data = QTableWidgetItem(f"{business_tuples[business][attr]}")
-                table.setItem(business, attr, data)
+    for business in range(business_ct):  # preserve indices to set cell location
+        for attr in range(attr_ct):
+            data = QTableWidgetItem(f"{business_tuples[business][attr]}")
+            table.setItem(business, attr, data)
 
 if __name__ == "__main__":
     config_file = Path("pg_config.json")

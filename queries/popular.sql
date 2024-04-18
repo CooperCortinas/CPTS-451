@@ -19,9 +19,11 @@ MonthlyGrowth AS (
         MonthlyReviews mr
 )
 SELECT
-    mg.business_id,
     b.name,
-    AVG(mg.growth_rate) AS avg_monthly_growth_rate
+    b.stars,
+    b.review_rating,
+    b.review_count,
+    ROUND(CAST(AVG(mg.growth_rate) AS numeric), 2) AS avg_monthly_growth_rate
 FROM
     MonthlyGrowth mg
 JOIN
@@ -30,7 +32,7 @@ WHERE
     mg.prev_month_reviews IS NOT NULL
     AND b.zipcode = '{zipcode}'
 GROUP BY
-    mg.business_id, b.name
+    mg.business_id, b.name, b.stars, b.review_rating, b.review_count
 HAVING
     AVG(mg.growth_rate) > 0.329
 ORDER BY

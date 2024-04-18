@@ -1,6 +1,6 @@
 {
-    "dbname": "project",
-    "user": "postgres",
-    "host": "localhost",
-    "password": "baxter"
+  "dbname": "",
+  "user": "",
+  "host": "",
+  "password": ""
 }

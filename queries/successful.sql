@@ -50,7 +50,8 @@ SELECT
     bfc.first_category,
     bfc.stars,
     bfc.review_count,
-    bfc.total_checkins
+    bfc.total_checkins,
+    bfc.business_id
 FROM
     BusinessWithFirstCategoryAndCheckins bfc
     JOIN CategoryAverages ca ON bfc.first_category = ca.cat_name

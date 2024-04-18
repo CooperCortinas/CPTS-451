@@ -1,11 +1,12 @@
 import sys, json, psycopg2
+from functools import partial
 from pathlib import Path
-from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox, QTableWidget, QTableWidgetItem, QAbstractItemView
 from PyQt5 import uic
 from typing import Any
 
 
-qtCreatorFile = Path("milestone3.ui")
+qtCreatorFile = Path("ui/milestone3.ui")
 
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile)
 
@@ -25,14 +26,25 @@ class myApp(QMainWindow):
 
         self.cur = self.conn.cursor()
 
+        # location and category filters
         self.ui.state_combo.currentTextChanged.connect(self.state_changed)
         self.ui.city_list.currentItemChanged.connect(self.city_changed)
         self.ui.zip_list.currentItemChanged.connect(self.zip_changed)
         self.ui.category_list.currentItemChanged.connect(self.category_changed)
+
+        # query popular/successful businesses button
         self.ui.refresh_button.clicked.connect(self.updateSuccessfulPopular)
+
+        # zipcode statistics info
         self.ui.zipstatistics_categories.horizontalHeader().setStretchLastSection(True)
 
-        self.init_states()
+        # connect all three business tables to reviews
+        for btable in [self.ui.business_table, self.ui.successful_table, self.ui.popular_table]:
+            btable.currentItemChanged.connect(partial(self.updateReviews, table=btable))
+            btable.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+        self.ui.review_table.horizontalHeader().setStretchLastSection(True)
+        # self.ui.review_table.setEditTriggers(QAbstractItemView.NoEditTriggers)  # can't view long texts if disabled
 
         # column names in Business table and display name in UI
         self.business_columns = [
@@ -42,8 +54,11 @@ class myApp(QMainWindow):
             ("b.stars", "Stars"),
             ("b.review_rating", "Review Rating"),
             ("b.review_count", "Review Count"),
-            ("b.num_checkins", "Checkin Count")
+            ("b.num_checkins", "Checkin Count"),
+            ("b.business_id", "Business ID")
         ]
+
+        self.init_states()
 
     def __del__(self):
         try:
@@ -108,16 +123,25 @@ class myApp(QMainWindow):
 
     def zip_changed(self):
         # clear all tables dependent on zipcode
-        self.ui.category_list.clear()
-        self.ui.zipstatistics_categories.clear()
-        self.ui.zipstatistics_businesses.clear()
-        self.ui.zipstatistics_population.clear()
-        self.ui.zipstatistics_income.clear()
+        widgets = [
+            self.ui.category_list,
+            self.ui.zipstatistics_categories,
+            self.ui.zipstatistics_businesses,
+            self.ui.zipstatistics_population,
+            self.ui.zipstatistics_income
+        ]
+        for w in widgets:
+            w.clear()
 
-        clearTable(self.ui.successful_table)
-        clearTable(self.ui.popular_table)
-        clearTable(self.ui.zipstatistics_categories)
-        clearTable(self.ui.business_table)
+        tables = [
+            self.ui.successful_table,
+            self.ui.popular_table,
+            self.ui.zipstatistics_categories,
+            self.ui.business_table,
+            self.ui.review_table
+        ]
+        for t in tables:
+            clearTable(t)
 
         try:
             selected_zip = self.ui.zip_list.currentItem().text().strip()
@@ -182,8 +206,6 @@ class myApp(QMainWindow):
         updateTable(self.ui.zipstatistics_categories, business_tuples, ["Count", "Category"])
 
     def category_changed(self):
-        clearTable(self.ui.business_table)
-
         try:
             selected_zip = self.ui.zip_list.currentItem().text()
             selected_category = self.ui.category_list.currentItem().text()
@@ -203,8 +225,8 @@ class myApp(QMainWindow):
 
     def updateSuccessfulPopular(self):
         queries_tables_columns = [
-            (Path("queries/successful.sql"), self.ui.successful_table, ["Name", "Category", "Stars", "Review Count", "Checkin Count"]),
-            (Path("queries/popular.sql"), self.ui.popular_table, ["Name", "Stars", "Review Rating", "Review Count"])
+            (Path("queries/successful.sql"), self.ui.successful_table, ["Name", "Category", "Stars", "Review Count", "Checkin Count", "Business ID"]),
+            (Path("queries/popular.sql"), self.ui.popular_table, ["Name", "Stars", "Review Rating", "Review Count", "Business ID"])
         ]
 
         for tup in queries_tables_columns:
@@ -215,6 +237,25 @@ class myApp(QMainWindow):
                 business_tuples = select_query(self.cur, query)
 
                 updateTable(table, business_tuples, columns)
+
+    def updateReviews(self, table: QTableWidget):
+        row = table.currentRow()
+        col = table.columnCount() - 1
+        try:
+            business_id = table.item(row, col).text()
+        except AttributeError:
+            return
+
+        columns = ["stars", "date", "text"]
+        query = f"""
+            SELECT {', '.join(columns)}
+            FROM Review
+            WHERE business_id='{business_id}'
+            ORDER BY date DESC;
+        """
+
+        review_tuples = select_query(self.cur, query)
+        updateTable(self.ui.review_table, review_tuples, [c.capitalize() for c in columns])
 
 def get_pg_config_str(config_path: Path) -> str:
     with open(config_path, "r") as file:

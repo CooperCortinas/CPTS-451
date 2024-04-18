@@ -5,7 +5,11 @@ With Python 3 installed, all required packages can be install using:
 ```bash
 pip install -r requirements.txt
 ```
-Then run the application with:
+Extract [yelp_dataset.7z](./yelp_dataset.7z) to the project root directory. Set your database credentials in [pg_config.json](./pg_config.json), then insert the data with:
+```bash
+python3 inserting_data.py
+```
+Run the application:
 ```bash
 python3 app.py
 ```

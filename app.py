@@ -206,6 +206,7 @@ class myApp(QMainWindow):
         updateTable(self.ui.zipstatistics_categories, business_tuples, ["Count", "Category"])
 
     def category_changed(self):
+        clearTable(self.ui.review_table)
         try:
             selected_zip = self.ui.zip_list.currentItem().text()
             selected_category = self.ui.category_list.currentItem().text()
@@ -226,7 +227,7 @@ class myApp(QMainWindow):
     def updateSuccessfulPopular(self):
         queries_tables_columns = [
             (Path("queries/successful.sql"), self.ui.successful_table, ["Name", "Category", "Stars", "Review Count", "Checkin Count", "Business ID"]),
-            (Path("queries/popular.sql"), self.ui.popular_table, ["Name", "Stars", "Review Rating", "Review Count", "Business ID"])
+            (Path("queries/popular.sql"), self.ui.popular_table, ["Name", "Stars", "Review Rating", "Review Count", "Growth Rate", "Business ID"])
         ]
 
         for tup in queries_tables_columns:
